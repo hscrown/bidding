@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import random
 
 # 페이지 기본 설정
 st.set_page_config(page_title="Bidding Game", page_icon="🎯", layout="wide")
@@ -73,6 +74,18 @@ if uploaded_file is not None:
 
     assign_all_seats(students)
 
+    # 남는 자리 찾기
+    total_seats = list(range(1, len(students) + 1))  # 전체 자리 번호 (1부터 시작)
+    occupied_seats = set(assigned_seats.keys())  # 이미 배정된 자리 번호
+    remaining_seats = list(set(total_seats) - occupied_seats)  # 남은 자리 번호
+
+    # 탈락한 학생들을 남는 자리에 랜덤 배정
+    for student in failed_students:
+        if remaining_seats:
+            random_seat = random.choice(remaining_seats)
+            assigned_seats[random_seat] = (student, 'random')
+            remaining_seats.remove(random_seat)
+
     # 게임 결과 확인 버튼
     if st.button("게임 결과 확인"):
         st.subheader("🎮 자리 배정 결과")
@@ -95,4 +108,3 @@ if uploaded_file is not None:
             {'selector': 'tbody td', 'props': [('text-align', 'center'), ('padding', '10px')]},
             {'selector': 'tbody tr:nth-child(even)', 'props': [('background-color', '#f2f2f2')]}
         ]))
-
