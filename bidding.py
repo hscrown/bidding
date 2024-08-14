@@ -6,10 +6,10 @@ import random
 st.set_page_config(page_title="Bidding Game", page_icon="🎯", layout="wide")
 
 # 제목과 설명
-st.title("🎯 학생 입찰 게임")
+st.title("🎯 자리 입찰 게임")
 st.markdown("""
-    **학생 입찰 게임**에 오신 것을 환영합니다! 
-    이 애플리케이션을 통해 학생들이 원하는 항목에 대해 입찰하고, 
+    **자리 입찰 게임**에 오신 것을 환영합니다! 
+    이 애플리케이션을 통해 학생들이 원하는 자리에 대해 입찰하고, 
     그 결과를 확인할 수 있습니다.
 """)
 
@@ -20,9 +20,25 @@ if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
 
     # 데이터프레임 확인
-    st.subheader("📊 CSV 파일 데이터")
-    st.dataframe(df.head())
+    st.subheader("📊 가장 인기 있는 자리는?")
+    
+    # 1지망 상위 3개 인기 자리 계산
+    top_3_seats_choice1 = df['choice1'].value_counts().head(3)
+    
+    # 결과 출력
+    st.write("상위 3개의 인기 자리 (1지망 기준):")
+    for seat, count in top_3_seats_choice1.items():
+        st.write(f"{seat:02d}번 자리는 {count}명이 비딩")
 
+    # 1지망, 2지망, 3지망을 모두 합쳐서 상위 3개 인기 자리 계산
+    combined_choices = pd.concat([df['choice1'], df['choice2'], df['choice3']])
+    top_3_seats_combined = combined_choices.value_counts().head(3)
+
+    # 결과 출력
+    st.write("상위 3개의 인기 자리 (1지망, 2지망, 3지망 합산 기준):")
+    for seat, count in top_3_seats_combined.items():
+        st.write(f"{seat:02d}번 자리는 {count}명이 비딩")
+    
     # Student 클래스 정의
     class Student:
         def __init__(self, studentId, studentName, points, choice1, bidPrice1, choice2, bidPrice2, choice3, bidPrice3):
@@ -46,23 +62,27 @@ if uploaded_file is not None:
     assigned_seats = {}
     failed_students = set()
 
+    # 고정된 빈자리
+    fixed_empty_seats = {5, 30}
+
     def assign_seat(student, choice, bidding, priority):
-        if choice not in assigned_seats:
+        # 고정된 빈자리는 제외
+        if choice not in assigned_seats and choice not in fixed_empty_seats:
             assigned_seats[choice] = (student, priority)
             return True
         else:
-            assigned_student, assigned_priority = assigned_seats[choice]
-            assigned_bidding = getattr(assigned_student, f"bidPrice{['first', 'second', 'third'].index(assigned_priority) + 1}")
-            
-            if priority == assigned_priority and bidding == assigned_bidding:
-                failed_students.add(student)
-                return False
-            elif bidding > assigned_bidding:
-                assigned_seats[choice] = (student, priority)
-                failed_students.add(assigned_student)
-                return True
-            else:
-                return False
+            assigned_student, assigned_priority = assigned_seats.get(choice, (None, None))
+            if assigned_student:
+                assigned_bidding = getattr(assigned_student, f"bidPrice{['first', 'second', 'third'].index(assigned_priority) + 1}")
+                if priority == assigned_priority and bidding == assigned_bidding:
+                    failed_students.add(student)
+                    return False
+                elif bidding > assigned_bidding:
+                    assigned_seats[choice] = (student, priority)
+                    failed_students.add(assigned_student)
+                    return True
+            failed_students.add(student)
+            return False
 
     def assign_all_seats(students):
         for student in students:
@@ -74,17 +94,16 @@ if uploaded_file is not None:
 
     assign_all_seats(students)
 
-    # 남는 자리 찾기
+    # 남는 자리 찾기 (고정된 빈자리를 제외한 자리들 중에서 1번부터 시작해서 빈 번호가 없게)
     total_seats = list(range(1, len(students) + 1))  # 전체 자리 번호 (1부터 시작)
     occupied_seats = set(assigned_seats.keys())  # 이미 배정된 자리 번호
-    remaining_seats = list(set(total_seats) - occupied_seats)  # 남은 자리 번호
+    remaining_seats = sorted(list(set(total_seats) - occupied_seats - fixed_empty_seats))  # 남은 자리 번호를 정렬 (고정된 빈자리 제외)
 
-    # 탈락한 학생들을 남는 자리에 랜덤 배정
+    # 탈락한 학생들을 남는 자리에 순서대로 배정
     for student in failed_students:
         if remaining_seats:
-            random_seat = random.choice(remaining_seats)
-            assigned_seats[random_seat] = (student, 'random')
-            remaining_seats.remove(random_seat)
+            next_seat = remaining_seats.pop(0)  # 가장 작은 번호의 자리부터 배정
+            assigned_seats[next_seat] = (student, 'random')
 
     # 게임 결과 확인 버튼
     if st.button("게임 결과 확인"):
@@ -95,8 +114,17 @@ if uploaded_file is not None:
 
         # 5열로 나누어 결과 표시
         rows = []
-        for i in range(0, len(sorted_seats), max_columns):
-            row = [f"{seat_number}번: {student.studentName}" for seat_number, (student, _) in sorted_seats[i:i + max_columns]]
+        for i in range(0, len(total_seats), max_columns):
+            row = []
+            for j in range(max_columns):
+                seat_number = i + j + 1
+                if seat_number in assigned_seats:
+                    student, _ = assigned_seats[seat_number]
+                    row.append(f"{seat_number}번: {student.studentName}")
+                elif seat_number in fixed_empty_seats:
+                    row.append(f"{seat_number}번: 빈자리 (고정)")
+                else:
+                    row.append(f"{seat_number}번: 빈자리")
             rows.append(row)
 
         result_df = pd.DataFrame(rows, columns=[f"열 {i+1}" for i in range(max_columns)])
