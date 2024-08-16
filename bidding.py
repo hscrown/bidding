@@ -91,27 +91,31 @@ st.header("데이터 업로드 및 분석")
 uploaded_file = st.file_uploader("CSV 파일을 업로드하세요", type="csv")
 
 if uploaded_file is not None:
-    df = pd.read_csv(uploaded_file)
+    try:
+        df = pd.read_csv(uploaded_file)
+        if df.empty:
+            st.warning("업로드한 파일이 비어 있습니다. 유효한 CSV 파일을 업로드하세요.")
+        else:
+            st.subheader("📊 가장 인기 있는 자리는?")
+            
+            # 1지망 상위 3개 인기 자리 계산
+            top_3_seats_choice1 = df['choice1'].value_counts().head(3)
+            
+            # 결과 출력
+            st.write("상위 3개의 인기 자리 (1지망 기준):")
+            for seat, count in top_3_seats_choice1.items():
+                st.write(f"{seat:02d}번 자리는 {count}명이 비딩했습니다.")
 
-    # 데이터프레임 확인
-    st.subheader("📊 가장 인기 있는 자리는?")
-    
-    # 1지망 상위 3개 인기 자리 계산
-    top_3_seats_choice1 = df['choice1'].value_counts().head(3)
-    
-    # 결과 출력
-    st.write("상위 3개의 인기 자리 (1지망 기준):")
-    for seat, count in top_3_seats_choice1.items():
-        st.write(f"{seat:02d}번 자리는 {count}명이 비딩했습니다.")
+            # 1지망, 2지망, 3지망을 모두 합쳐서 상위 3개 인기 자리 계산
+            combined_choices = pd.concat([df['choice1'], df['choice2'], df['choice3']])
+            top_3_seats_combined = combined_choices.value_counts().head(3)
 
-    # 1지망, 2지망, 3지망을 모두 합쳐서 상위 3개 인기 자리 계산
-    combined_choices = pd.concat([df['choice1'], df['choice2'], df['choice3']])
-    top_3_seats_combined = combined_choices.value_counts().head(3)
-
-    # 결과 출력
-    st.write("상위 3개의 인기 자리 (1지망, 2지망, 3지망 합산 기준):")
-    for seat, count in top_3_seats_combined.items():
-        st.write(f"{seat:02d}번 자리는 {count}명이 비딩했습니다.")
+            # 결과 출력
+            st.write("상위 3개의 인기 자리 (1지망, 2지망, 3지망 합산 기준):")
+            for seat, count in top_3_seats_combined.items():
+                st.write(f"{seat:02d}번 자리는 {count}명이 비딩했습니다.")
+    except pd.errors.EmptyDataError:
+        st.error("업로드한 파일이 비어 있거나 유효한 CSV 형식이 아닙니다. 다시 시도하세요.")
 else:
     st.warning("먼저 CSV 파일을 업로드하세요.")
 st.markdown('</div>', unsafe_allow_html=True)
@@ -120,82 +124,79 @@ st.markdown('</div>', unsafe_allow_html=True)
 st.markdown('<div id="result" class="section">', unsafe_allow_html=True)
 st.header("게임 결과")
 
-if uploaded_file is not None:
-    df = pd.read_csv(uploaded_file)
-
-    # Student 클래스 정의
-    class Student:
-        def __init__(self, studentId, studentName, points, choice1, bidPrice1, choice2, bidPrice2, choice3, bidPrice3):
-            self.studentId = studentId
-            self.studentName = studentName
-            self.points = points
-            self.choice1 = choice1
-            self.bidPrice1 = bidPrice1
-            self.choice2 = choice2
-            self.bidPrice2 = bidPrice2
-            self.choice3 = choice3
-            self.bidPrice3 = bidPrice3
-
-    # df로 Student 객체 생성
-    students = [Student(studentId, studentName, points, choice1, bidPrice1, choice2, bidPrice2, choice3, bidPrice3)
-                for studentId, studentName, points, choice1, bidPrice1, choice2, bidPrice2, choice3, bidPrice3 
-                in zip(df['studentId'], df['studentName'], df['points'], df['choice1'], df['bidPrice1'], 
-                       df['choice2'], df['bidPrice2'], df['choice3'], df['bidPrice3'])]
-
-    # 자리 배정을 위한 딕셔너리
-    assigned_seats = {}
-    failed_students = set()
-
-    # 고정된 빈자리
-    fixed_empty_seats = {5, 30}
-
-    def assign_seat(student, choice, bidding):
-        # 고정된 빈자리에 베팅한 경우 무효 처리 (즉, 배정하지 않음)
-        if choice in fixed_empty_seats:
-            return False
-        
-        # 선택한 자리가 아직 배정되지 않았거나, 더 높은 입찰가인 경우 배정
-        if choice not in assigned_seats or bidding > assigned_seats[choice][1]:
-            assigned_seats[choice] = (student, bidding)
-            return True
-        return False
-
-    def assign_all_seats(students):
-        for priority in ['first', 'second', 'third']:  # 1지망, 2지망, 3지망 순서대로 처리
-            for student in students:
-                if priority == 'first':
-                    if assign_seat(student, student.choice1, student.bidPrice1):
-                        continue
-                elif priority == 'second':
-                    if assign_seat(student, student.choice2, student.bidPrice2):
-                        continue
-                elif priority == 'third':
-                    if assign_seat(student, student.choice3, student.bidPrice3):
-                        continue
-                failed_students.add(student)
-
-    # 자리 배정을 수행
-    assign_all_seats(students)
-
-    # 남은 자리 찾기 (고정된 빈자리를 제외한 자리들 중에서 1번부터 시작해서 빈 번호가 없게)
-    total_seats = list(range(1, len(students) + 1))  # 전체 자리 번호 (1부터 시작)
-    occupied_seats = set(assigned_seats.keys())  # 이미 배정된 자리 번호
-    remaining_seats = sorted(list(set(total_seats) - occupied_seats - fixed_empty_seats))  # 남은 자리 번호를 정렬 (고정된 빈자리 제외)
-
-    # 탈락한 학생들을 남는 자리에 순서대로 배정
-    for student in failed_students:
-        if remaining_seats:
-            next_seat = remaining_seats.pop(0)  # 가장 작은 번호의 자리부터 배정
-            assigned_seats[next_seat] = (student, 'random')
-
-    # 중복 배정 확인 및 해결
-    assigned_students = [name for seat, (student, _) in assigned_seats.items()]
-    duplicate_assigned_students = pd.Series(assigned_students).value_counts()
-    if not duplicate_assigned_students[duplicate_assigned_students > 1].empty:
-        st.warning("중복 배정된 학생이 있습니다. 자리 배정 로직을 다시 확인하세요.")
-
-    # 게임 결과 확인 버튼
+if uploaded_file is not None and not df.empty:
     if st.button("게임 결과 확인"):
+        # Student 클래스 정의
+        class Student:
+            def __init__(self, studentId, studentName, points, choice1, bidPrice1, choice2, bidPrice2, choice3, bidPrice3):
+                self.studentId = studentId
+                self.studentName = studentName
+                self.points = points
+                self.choice1 = choice1
+                self.bidPrice1 = bidPrice1
+                self.choice2 = choice2
+                self.bidPrice2 = bidPrice2
+                self.choice3 = choice3
+                self.bidPrice3 = bidPrice3
+
+        # df로 Student 객체 생성
+        students = [Student(studentId, studentName, points, choice1, bidPrice1, choice2, bidPrice2, choice3, bidPrice3)
+                    for studentId, studentName, points, choice1, bidPrice1, choice2, bidPrice2, choice3, bidPrice3 
+                    in zip(df['studentId'], df['studentName'], df['points'], df['choice1'], df['bidPrice1'], 
+                           df['choice2'], df['bidPrice2'], df['choice3'], df['bidPrice3'])]
+
+        # 자리 배정을 위한 딕셔너리
+        assigned_seats = {}
+        failed_students = set()
+
+        # 고정된 빈자리
+        fixed_empty_seats = {5, 30}
+
+        def assign_seat(student, choice, bidding):
+            # 고정된 빈자리에 베팅한 경우 무효 처리 (즉, 배정하지 않음)
+            if choice in fixed_empty_seats:
+                return False
+            
+            # 선택한 자리가 아직 배정되지 않았거나, 더 높은 입찰가인 경우 배정
+            if choice not in assigned_seats or bidding > assigned_seats[choice][1]:
+                assigned_seats[choice] = (student, bidding)
+                return True
+            return False
+
+        def assign_all_seats(students):
+            for priority in ['first', 'second', 'third']:  # 1지망, 2지망, 3지망 순서대로 처리
+                for student in students:
+                    if priority == 'first':
+                        if assign_seat(student, student.choice1, student.bidPrice1):
+                            continue
+                    elif priority == 'second':
+                        if assign_seat(student, student.choice2, student.bidPrice2):
+                            continue
+                    elif priority == 'third':
+                        if assign_seat(student, student.choice3, student.bidPrice3):
+                            continue
+                    failed_students.add(student)
+
+        # 자리 배정을 수행
+        assign_all_seats(students)
+
+        # 남은 자리 찾기 (고정된 빈자리를 제외한 자리들 중에서 1번부터 시작해서 빈 번호가 없게)
+        total_seats = list(range(1, len(students) + 1))  # 전체 자리 번호 (1부터 시작)
+        occupied_seats = set(assigned_seats.keys())  # 이미 배정된 자리 번호
+        remaining_seats = sorted(list(set(total_seats) - occupied_seats - fixed_empty_seats))  # 남은 자리 번호를 정렬 (고정된 빈자리 제외)
+
+        # 탈락한 학생들을 남는 자리에 순서대로 배정
+        for student in failed_students:
+            if remaining_seats:
+                next_seat = remaining_seats.pop(0)  # 가장 작은 번호의 자리부터 배정
+                assigned_seats[next_seat] = (student, 'random')
+
+        # 중복 배정 확인 및 해결
+        assigned_students = [name for seat, (student, _) in assigned_seats.items()]
+        duplicate_assigned_students = pd.Series(assigned_students).value_counts()
+        if not duplicate_assigned_students[duplicate_assigned_students > 1].empty:
+            st.warning("중복 배정된 학생이 있습니다. 자리 배정 로직을 다시 확인하세요.")
+
         st.subheader("🎮 자리 배정 결과")
 
         max_columns = 5
@@ -232,6 +233,6 @@ st.markdown('</div>', unsafe_allow_html=True)
 # 푸터 추가
 st.markdown("""
     <div class="footer">
-        © 2024 자리 입찰 게임. 모든 권리 보유.
+        © 2024 oystershells
     </div>
 """, unsafe_allow_html=True)
