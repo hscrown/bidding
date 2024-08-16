@@ -180,6 +180,29 @@ if uploaded_file is not None and not df.empty:
         # 자리 배정을 수행
         assign_all_seats(students)
 
+        # 중복 배정 확인 및 해결
+        assigned_students = [student.studentName for seat, (student, _) in assigned_seats.items()]
+        duplicate_assigned_students = pd.Series(assigned_students).value_counts()
+        
+        if not duplicate_assigned_students[duplicate_assigned_students > 1].empty:
+            st.warning("중복 배정된 학생이 있습니다. 자리 배정 로직을 수정합니다.")
+            
+            # 중복된 학생들 처리
+            for student_name in duplicate_assigned_students[duplicate_assigned_students > 1].index:
+                # 중복된 학생의 자리 정보 수집
+                student_positions = [(seat, student) for seat, (student, _) in assigned_seats.items() if student.studentName == student_name]
+                student_positions.sort(key=lambda x: (
+                    student_positions.index(x),  # 기존 배정 순서
+                    students.index(x[1])  # 원래 데이터프레임에서의 순서
+                ))
+                # 최선의 자리 선택 (우선순위 높은 자리를 택함)
+                best_position = student_positions[0]
+                for position in student_positions[1:]:
+                    failed_students.add(position[1])
+                    assigned_seats.pop(position[0])
+                # 최선의 자리 할당
+                assigned_seats[best_position[0]] = (best_position[1], 'corrected')
+
         # 남은 자리 찾기 (고정된 빈자리를 제외한 자리들 중에서 1번부터 시작해서 빈 번호가 없게)
         total_seats = list(range(1, len(students) + 1))  # 전체 자리 번호 (1부터 시작)
         occupied_seats = set(assigned_seats.keys())  # 이미 배정된 자리 번호
@@ -190,12 +213,6 @@ if uploaded_file is not None and not df.empty:
             if remaining_seats:
                 next_seat = remaining_seats.pop(0)  # 가장 작은 번호의 자리부터 배정
                 assigned_seats[next_seat] = (student, 'random')
-
-        # 중복 배정 확인 및 해결
-        assigned_students = [student.studentName for seat, (student, _) in assigned_seats.items()]
-        duplicate_assigned_students = pd.Series(assigned_students).value_counts()
-        if not duplicate_assigned_students[duplicate_assigned_students > 1].empty:
-            st.warning("중복 배정된 학생이 있습니다. 자리 배정 로직을 다시 확인하세요.")
 
         st.subheader("🎮 자리 배정 결과")
 
@@ -233,6 +250,6 @@ st.markdown('</div>', unsafe_allow_html=True)
 # 푸터 추가
 st.markdown("""
     <div class="footer">
-        © 2024 oystershells
+        © 2024 자리 입찰 게임. 모든 권리 보유.
     </div>
 """, unsafe_allow_html=True)
