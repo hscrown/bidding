@@ -192,7 +192,7 @@ if uploaded_file is not None and not df.empty:
                 assigned_seats[next_seat] = (student, 'random')
 
         # 중복 배정 확인 및 해결
-        assigned_students = [name for seat, (student, _) in assigned_seats.items()]
+        assigned_students = [student.studentName for seat, (student, _) in assigned_seats.items()]
         duplicate_assigned_students = pd.Series(assigned_students).value_counts()
         if not duplicate_assigned_students[duplicate_assigned_students > 1].empty:
             st.warning("중복 배정된 학생이 있습니다. 자리 배정 로직을 다시 확인하세요.")
