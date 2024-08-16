@@ -150,11 +150,11 @@ if uploaded_file is not None:
 
         result_df = pd.DataFrame(rows, columns=[f"열 {i+1}" for i in range(max_columns)])
 
-      # 표 스타일링
-      st.write("자리 배정 결과:")
-      st.table(result_df.style.set_table_styles([
-          {'selector': 'thead th', 'props': [('background-color', '#4CAF50'), ('color', 'white'), ('text-align', 'center')]},
-          {'selector': 'tbody td', 'props': [('text-align', 'center'), ('padding', '10px')]},
-          {'selector': 'tbody tr:nth-child(even)', 'props': [('background-color', '#f2f2f2')]}
-      ]))
+   # 표 스타일링
+   st.write("자리 배정 결과:")
+   st.table(result_df.style.set_table_styles([
+       {'selector': 'thead th', 'props': [('background-color', '#4CAF50'), ('color', 'white'), ('text-align', 'center')]},
+       {'selector': 'tbody td', 'props': [('text-align', 'center'), ('padding', '10px')]},
+       {'selector': 'tbody tr:nth-child(even)', 'props': [('background-color', '#f2f2f2')]}
+   ]))
 
