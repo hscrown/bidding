@@ -29,15 +29,63 @@ st.markdown("""
     이 게임을 통해 가장 원하는 자리를 차지해보세요! 모두에게 행운을 빕니다!
 """)
 
+# 학생 데이터를 저장할 리스트
+student_data = []
+
 # CSV 파일 업로드
 uploaded_file = st.file_uploader("CSV 파일을 업로드하세요", type="csv")
 
 if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
+    st.write("업로드된 학생 목록:")
+    st.dataframe(df)
+    student_data = df.to_dict(orient='records')
 
+# 직접 학생 추가
+st.subheader("학생 등록")
+studentId = st.text_input("학생 ID")
+studentName = st.text_input("학생 이름")
+points = st.number_input("포인트", min_value=0, value=100, step=1)
+choice1 = st.number_input("1지망 자리 번호", min_value=1, value=1, step=1)
+bidPrice1 = st.number_input("1지망 입찰 포인트", min_value=10, value=10, step=1)
+choice2 = st.number_input("2지망 자리 번호", min_value=1, value=1, step=1)
+bidPrice2 = st.number_input("2지망 입찰 포인트", min_value=0, value=0, step=1)
+choice3 = st.number_input("3지망 자리 번호", min_value=1, value=1, step=1)
+bidPrice3 = st.number_input("3지망 입찰 포인트", min_value=0, value=0, step=1)
+
+if st.button("학생 추가"):
+    student_data.append({
+        "studentId": studentId,
+        "studentName": studentName,
+        "points": points,
+        "choice1": choice1,
+        "bidPrice1": bidPrice1,
+        "choice2": choice2,
+        "bidPrice2": bidPrice2,
+        "choice3": choice3,
+        "bidPrice3": bidPrice3
+    })
+    st.success(f"학생 {studentName}가 추가되었습니다.")
+
+# 추가된 학생 목록 표시 및 삭제 기능
+st.subheader("등록된 학생 목록")
+if student_data:
+    df_students = pd.DataFrame(student_data)
+    st.dataframe(df_students)
+
+    delete_student = st.text_input("삭제할 학생 ID를 입력하세요")
+    if st.button("학생 삭제"):
+        student_data = [student for student in student_data if student['studentId'] != delete_student]
+        st.success(f"학생 ID {delete_student}가 삭제되었습니다.")
+else:
+    st.write("등록된 학생이 없습니다.")
+
+if student_data:
     # 데이터프레임 확인
     st.subheader("📊 가장 인기 있는 자리는?")
     
+    df = pd.DataFrame(student_data)
+
     # 1지망 상위 3개 인기 자리 계산
     top_3_seats_choice1 = df['choice1'].value_counts().head(3)
     
