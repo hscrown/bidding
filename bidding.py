@@ -164,18 +164,21 @@ if uploaded_file is not None and not df.empty:
             return False
 
         def assign_all_seats(students):
+            unassigned_students = set(students)
             for priority in ['first', 'second', 'third']:  # 1지망, 2지망, 3지망 순서대로 처리
-                for student in students:
+                current_failed_students = set()
+                for student in unassigned_students:
                     if priority == 'first':
-                        if assign_seat(student, student.choice1, student.bidPrice1):
-                            continue
+                        if not assign_seat(student, student.choice1, student.bidPrice1):
+                            current_failed_students.add(student)
                     elif priority == 'second':
-                        if assign_seat(student, student.choice2, student.bidPrice2):
-                            continue
+                        if not assign_seat(student, student.choice2, student.bidPrice2):
+                            current_failed_students.add(student)
                     elif priority == 'third':
-                        if assign_seat(student, student.choice3, student.bidPrice3):
-                            continue
-                    failed_students.add(student)
+                        if not assign_seat(student, student.choice3, student.bidPrice3):
+                            current_failed_students.add(student)
+                
+                unassigned_students = current_failed_students
 
         # 자리 배정을 수행
         assign_all_seats(students)
