@@ -191,11 +191,12 @@ if uploaded_file is not None and not df.empty:
             for student_name in duplicate_assigned_students[duplicate_assigned_students > 1].index:
                 # 중복된 학생의 자리 정보 수집
                 student_positions = [(seat, student) for seat, (student, _) in assigned_seats.items() if student.studentName == student_name]
-                student_positions.sort(key=lambda x: (
-                    student_positions.index(x),  # 기존 배정 순서
-                    students.index(x[1])  # 원래 데이터프레임에서의 순서
-                ))
+                
                 # 최선의 자리 선택 (우선순위 높은 자리를 택함)
+                student_positions.sort(key=lambda x: (
+                    students.index(x[1]),  # 원래 데이터프레임에서의 순서
+                ))
+                
                 best_position = student_positions[0]
                 for position in student_positions[1:]:
                     failed_students.add(position[1])
