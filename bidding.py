@@ -81,36 +81,35 @@ if uploaded_file is not None:
     # 고정된 빈자리
     fixed_empty_seats = {5, 30}
 
-    def assign_seat(student, choice, bidding, priority):
-        # 고정된 빈자리는 제외
-        if choice not in assigned_seats and choice not in fixed_empty_seats:
-            assigned_seats[choice] = (student, priority)
-            return True
-        else:
-            assigned_student, assigned_priority = assigned_seats.get(choice, (None, None))
-            if assigned_student:
-                assigned_bidding = getattr(assigned_student, f"bidPrice{['first', 'second', 'third'].index(assigned_priority) + 1}")
-                if priority == assigned_priority and bidding == assigned_bidding:
-                    failed_students.add(student)
-                    return False
-                elif bidding > assigned_bidding:
-                    assigned_seats[choice] = (student, priority)
-                    failed_students.add(assigned_student)
-                    return True
-            failed_students.add(student)
+    def assign_seat(student, choice, bidding):
+        # 고정된 빈자리에 베팅한 경우 무효 처리 (즉, 배정하지 않음)
+        if choice in fixed_empty_seats:
             return False
+        
+        # 선택한 자리가 아직 배정되지 않았거나, 더 높은 입찰가인 경우 배정
+        if choice not in assigned_seats or bidding > assigned_seats[choice][1]:
+            assigned_seats[choice] = (student, bidding)
+            return True
+        return False
 
     def assign_all_seats(students):
-        for student in students:
-            for choice, bid_price, priority in zip([student.choice1, student.choice2, student.choice3], 
-                                                   [student.bidPrice1, student.bidPrice2, student.bidPrice3], 
-                                                   ['first', 'second', 'third']):
-                if assign_seat(student, choice, bid_price, priority):
-                    break
+        for priority in ['first', 'second', 'third']:  # 1지망, 2지망, 3지망 순서대로 처리
+            for student in students:
+                if priority == 'first':
+                    if assign_seat(student, student.choice1, student.bidPrice1):
+                        continue
+                elif priority == 'second':
+                    if assign_seat(student, student.choice2, student.bidPrice2):
+                        continue
+                elif priority == 'third':
+                    if assign_seat(student, student.choice3, student.bidPrice3):
+                        continue
+                failed_students.add(student)
 
+    # 자리 배정을 수행
     assign_all_seats(students)
 
-    # 남는 자리 찾기 (고정된 빈자리를 제외한 자리들 중에서 1번부터 시작해서 빈 번호가 없게)
+    # 남은 자리 찾기 (고정된 빈자리를 제외한 자리들 중에서 1번부터 시작해서 빈 번호가 없게)
     total_seats = list(range(1, len(students) + 1))  # 전체 자리 번호 (1부터 시작)
     occupied_seats = set(assigned_seats.keys())  # 이미 배정된 자리 번호
     remaining_seats = sorted(list(set(total_seats) - occupied_seats - fixed_empty_seats))  # 남은 자리 번호를 정렬 (고정된 빈자리 제외)
