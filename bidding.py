@@ -250,6 +250,6 @@ st.markdown('</div>', unsafe_allow_html=True)
 # 푸터 추가
 st.markdown("""
     <div class="footer">
-        © 2024 자리 입찰 게임. 모든 권리 보유.
+        © 2024 oystershells
     </div>
 """, unsafe_allow_html=True)
