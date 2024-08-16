@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import random
 
 # 페이지 기본 설정
 st.set_page_config(page_title="Bidding Game", page_icon="🎯", layout="wide")
@@ -180,42 +181,21 @@ if uploaded_file is not None and not df.empty:
                 
                 unassigned_students = current_failed_students
 
-        # 자리 배정을 수행
-        assign_all_seats(students)
+            return unassigned_students
 
-        # 중복 배정 확인 및 해결
-        assigned_students = [student.studentName for seat, (student, _) in assigned_seats.items()]
-        duplicate_assigned_students = pd.Series(assigned_students).value_counts()
-        
-        if not duplicate_assigned_students[duplicate_assigned_students > 1].empty:
-            st.warning("중복 배정된 학생이 있습니다. 자리 배정 로직을 수정합니다.")
-            
-            # 중복된 학생들 처리
-            for student_name in duplicate_assigned_students[duplicate_assigned_students > 1].index:
-                # 중복된 학생의 자리 정보 수집
-                student_positions = [(seat, student) for seat, (student, _) in assigned_seats.items() if student.studentName == student_name]
-                
-                # 최선의 자리 선택 (우선순위 높은 자리를 택함)
-                student_positions.sort(key=lambda x: (
-                    students.index(x[1]),  # 원래 데이터프레임에서의 순서
-                ))
-                
-                best_position = student_positions[0]
-                for position in student_positions[1:]:
-                    failed_students.add(position[1])
-                    assigned_seats.pop(position[0])
-                # 최선의 자리 할당
-                assigned_seats[best_position[0]] = (best_position[1], 'corrected')
+        # 자리 배정을 수행
+        unassigned_students = assign_all_seats(students)
 
         # 남은 자리 찾기 (고정된 빈자리를 제외한 자리들 중에서 1번부터 시작해서 빈 번호가 없게)
         total_seats = list(range(1, len(students) + 1))  # 전체 자리 번호 (1부터 시작)
         occupied_seats = set(assigned_seats.keys())  # 이미 배정된 자리 번호
         remaining_seats = sorted(list(set(total_seats) - occupied_seats - fixed_empty_seats))  # 남은 자리 번호를 정렬 (고정된 빈자리 제외)
 
-        # 탈락한 학생들을 남는 자리에 순서대로 배정
-        for student in failed_students:
+        # 3지망에서도 자리에 배정되지 못한 학생들을 남는 자리에 무작위로 배정
+        random.shuffle(remaining_seats)
+        for student in unassigned_students:
             if remaining_seats:
-                next_seat = remaining_seats.pop(0)  # 가장 작은 번호의 자리부터 배정
+                next_seat = remaining_seats.pop(0)  # 남은 자리 중 하나에 무작위로 배정
                 assigned_seats[next_seat] = (student, 'random')
 
         st.subheader("🎮 자리 배정 결과")
