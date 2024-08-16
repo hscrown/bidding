@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import random
 
 # 페이지 기본 설정
 st.set_page_config(page_title="Bidding Game", page_icon="🎯", layout="wide")
@@ -153,50 +152,45 @@ if uploaded_file is not None and not df.empty:
         # 고정된 빈자리
         fixed_empty_seats = {5, 30}
 
-        def assign_seat(student, choice, bidding):
-            # 고정된 빈자리에 베팅한 경우 무효 처리 (즉, 배정하지 않음)
-            if choice in fixed_empty_seats:
-                return False
-            
-            # 선택한 자리가 아직 배정되지 않았거나, 더 높은 입찰가인 경우 배정
-            if choice not in assigned_seats or bidding > assigned_seats[choice][1]:
-                assigned_seats[choice] = (student, bidding)
-                return True
-            return False
+        def assign_choice(priority):
+            """ 
+            주어진 priority에 따라 학생들을 배정하는 함수 
+            priority는 'choice1', 'choice2', 'choice3' 중 하나를 의미
+            """
+            remaining_students = [s for s in students if s not in assigned_seats.values()]
+            choices = [getattr(student, priority) for student in remaining_students]
+            bids = [getattr(student, f'bidPrice{priority[-1]}') for student in remaining_students]
 
-        def assign_all_seats(students):
-            unassigned_students = set(students)
-            for priority in ['first', 'second', 'third']:  # 1지망, 2지망, 3지망 순서대로 처리
-                current_failed_students = set()
-                for student in unassigned_students:
-                    if priority == 'first':
-                        if not assign_seat(student, student.choice1, student.bidPrice1):
-                            current_failed_students.add(student)
-                    elif priority == 'second':
-                        if not assign_seat(student, student.choice2, student.bidPrice2):
-                            current_failed_students.add(student)
-                    elif priority == 'third':
-                        if not assign_seat(student, student.choice3, student.bidPrice3):
-                            current_failed_students.add(student)
-                
-                unassigned_students = current_failed_students
+            # choice1 기준으로 bidPrice1의 최대값을 구하고, 해당 학생을 배정
+            df_choices = pd.DataFrame({
+                'student': remaining_students,
+                'choice': choices,
+                'bid': bids
+            })
+            max_bids = df_choices.groupby('choice')['bid'].max()
 
-            return unassigned_students
+            for choice, max_bid in max_bids.items():
+                best_students = df_choices[(df_choices['choice'] == choice) & (df_choices['bid'] == max_bid)]
+                if not best_students.empty:
+                    chosen_student = best_students.sample(1).iloc[0]['student']  # 동일한 경우 무작위로 선택
+                    assigned_seats[choice] = chosen_student
 
-        # 자리 배정을 수행
-        unassigned_students = assign_all_seats(students)
+        # 1지망, 2지망, 3지망에 대해 순차적으로 배정
+        assign_choice('choice1')
+        assign_choice('choice2')
+        assign_choice('choice3')
 
         # 남은 자리 찾기 (고정된 빈자리를 제외한 자리들 중에서 1번부터 시작해서 빈 번호가 없게)
         total_seats = list(range(1, len(students) + 1))  # 전체 자리 번호 (1부터 시작)
         occupied_seats = set(assigned_seats.keys())  # 이미 배정된 자리 번호
         remaining_seats = sorted(list(set(total_seats) - occupied_seats - fixed_empty_seats))  # 남은 자리 번호를 정렬 (고정된 빈자리 제외)
 
-        # 3지망에서도 자리에 배정되지 못한 학생들을 남는 자리에 무작위로 배정
-        random.shuffle(remaining_seats)
-        for student in unassigned_students:
+        # 탈락한 학생들을 남는 자리에 순서대로 배정
+        failed_students = set(students) - set(assigned_seats.values())
+        for student in failed_students:
             if remaining_seats:
-                next_seat = remaining_seats.pop(0)  # 남은 자리 중 하나에 무작위로 배정
-                assigned_seats[next_seat] = (student, 'random')
+                next_seat = remaining_seats.pop(0)  # 가장 작은 번호의 자리부터 배정
+                assigned_seats[next_seat] = student
 
         st.subheader("🎮 자리 배정 결과")
 
@@ -210,7 +204,7 @@ if uploaded_file is not None and not df.empty:
             for j in range(max_columns):
                 seat_number = i + j + 1
                 if seat_number in assigned_seats:
-                    student, _ = assigned_seats[seat_number]
+                    student = assigned_seats[seat_number]
                     row.append(f"{seat_number}번: {student.studentName}")
                 elif seat_number in fixed_empty_seats:
                     row.append(f"{seat_number}번: 빈자리 (고정)")
