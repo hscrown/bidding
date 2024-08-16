@@ -120,6 +120,12 @@ if uploaded_file is not None:
             next_seat = remaining_seats.pop(0)  # 가장 작은 번호의 자리부터 배정
             assigned_seats[next_seat] = (student, 'random')
 
+    # 중복 배정 확인 및 해결
+    assigned_students = [name for seat, (student, _) in assigned_seats.items()]
+    duplicate_assigned_students = pd.Series(assigned_students).value_counts()
+    if not duplicate_assigned_students[duplicate_assigned_students > 1].empty:
+        st.warning("중복 배정된 학생이 있습니다. 자리 배정 로직을 다시 확인하세요.")
+
     # 게임 결과 확인 버튼
     if st.button("게임 결과 확인"):
         st.subheader("🎮 자리 배정 결과")
@@ -149,5 +155,6 @@ if uploaded_file is not None:
         st.table(result_df.style.set_table_styles([
             {'selector': 'thead th', 'props': [('background-color', '#4CAF50'), ('color', 'white')]},
             {'selector': 'tbody td', 'props': [('text-align', 'center'), ('padding', '10px')]},
-            {'selector': 'tbody tr:nth-child(even)', 'props': [('background-color', '#f2f2f2')]}
+            {'selector': '{'selector': 'tbody tr:nth-child(even)', 'props': [('background-color', '#f2f2f2')]}
         ]))
+
