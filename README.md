@@ -22,7 +22,7 @@
     ```bash
     streamlit run app.py
     ```
-   또는 [Streamlit Cloud](https://share.streamlit.io/)와 같은 호스팅 서비스를 통해 웹에서 실행할 수 있습니다.
+   또는 [Streamlit Cloud](https://share.streamlit.io/) 웹에서 실행할 수 있습니다.
    - 웹페이지 링크: [https://biddingseats.streamlit.app/](https://biddingseats.streamlit.app/)
 
 2. **CSV 파일 업로드**: 게임에 참가할 학생들의 정보를 담은 CSV 파일을 업로드합니다. 이 CSV 파일에는 다음과 같은 컬럼이 포함되어야 합니다:
@@ -45,6 +45,7 @@ studentId,studentName,points,choice1,bidPrice1,choice2,bidPrice2,choice3,bidPric
 1,김철수,100,3,20,5,10,7,5
 2,이영희,100,2,15,4,20,1,10
 3,박민수,100,1,30,6,15,8,5
+```
 
 ## 프로젝트 구조
 
@@ -54,6 +55,8 @@ studentId,studentName,points,choice1,bidPrice1,choice2,bidPrice2,choice3,bidPric
 ├── 📄 app.py           # Streamlit 애플리케이션 메인 파일
 ├── 📄 requirements.txt # 필요한 Python 패키지 목록
 └── 📄 README.md        # 프로젝트 설명서 (이 파일)
+
+```
 
 ## 요구 사항 (버전 1)
 
