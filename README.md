@@ -21,7 +21,7 @@
     ```bash
     streamlit run app.py
     ```
-   또는 [Streamlit Cloud](https://share.streamlit.io/) 웹에서 실행할 수 있습니다.
+   또는 웹에서 실행할 수 있습니다.
    - 웹페이지 링크: [https://biddingseats.streamlit.app/](https://biddingseats.streamlit.app/)
 
 2. **CSV 파일 업로드**: 게임에 참가할 학생들의 정보를 담은 CSV 파일을 업로드합니다. 이 CSV 파일에는 다음과 같은 컬럼이 포함되어야 합니다:
