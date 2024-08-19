@@ -69,8 +69,8 @@ if uploaded_file is not None:
             # 2지망 배정 수행 (1지망에서 자리가 배정되지 않은 학생들만 대상으로)
             assign_choice(remaining_students_after_choice1, 'choice2')
 
-            # 배정된 결과를 테이블로 출력
-            st.subheader("🎮 자리 배정 결과")
+            # 1지망과 2지망 배정 결과를 모두 포함하여 출력
+            st.subheader("🎮 1지망 및 2지망 배정 결과")
             result_rows = []
             for seat, student in sorted(assigned_seats.items()):
                 result_rows.append([f"{seat}번 자리", student.studentName])
