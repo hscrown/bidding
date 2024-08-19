@@ -30,10 +30,11 @@ if uploaded_file is not None:
 
                     # 해당 자리가 이미 배정되었는지 확인
                     if choice in taken_seats:
+                        st.write(f"학생 {student_name}의 {choice_column} 자리 {choice}는 이미 배정됨.")
                         continue  # 이미 배정된 자리면 건너뜀
 
                     # 해당 자리를 차지할 다른 학생이 있는지 확인
-                    conflicting_students = df[(df[choice_column] == choice) & (df[bid_column] >= bid) & (df['studentId'] < student_id)]
+                    conflicting_students = df[(df[choice_column] == choice) & (df[bid_column] > bid)]
 
                     if conflicting_students.empty:
                         # 자리를 배정
@@ -44,7 +45,9 @@ if uploaded_file is not None:
                             'choice': choice_column
                         }
                         taken_seats.add(choice)
+                        st.write(f"학생 {student_name}가 {choice}번 자리에 배정됨. (입찰 점수: {bid})")
                     else:
+                        st.write(f"학생 {student_name}는 {choice_column}에서 자리 배정 실패.")
                         unassigned_students.append(student)
 
                 return pd.DataFrame(unassigned_students)
