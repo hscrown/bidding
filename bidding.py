@@ -30,50 +30,44 @@ if uploaded_file is not None:
             # 자리 배정을 위한 딕셔너리
             assigned_seats = {}
 
-            def assign_choice(students, priority):
+            def assign_choice(df, priority):
                 """
                 특정 지망(priority)을 기준으로 자리 배정을 수행하는 함수
                 priority는 'choice1' 또는 'choice2'로 지정
                 """
-                remaining_students = students[:]
-                while remaining_students:
+                remaining_students = df.copy()
+                while not remaining_students.empty:
                     # 현재 남아있는 학생들 중에서 지망에 대한 최고점 찾기
-                    df_choices = pd.DataFrame({
-                        'student': remaining_students,
-                        'choice': [getattr(s, priority) for s in remaining_students],
-                        'bidPrice': [getattr(s, f'bidPrice{priority[-1]}') for s in remaining_students]
-                    })
-
-                    max_bid = df_choices['bidPrice'].max()
-                    best_students = df_choices[df_choices['bidPrice'] == max_bid]
+                    max_bid = remaining_students[f'bidPrice{priority[-1]}'].max()
+                    best_students = remaining_students[remaining_students[f'bidPrice{priority[-1]}'] == max_bid]
 
                     if len(best_students) > 1:
                         # 동일한 최고 입찰가를 제시한 학생들이 여러 명인 경우, 이 학생들을 탈락시킴
-                        for _, student_row in best_students.iterrows():
-                            remaining_students.remove(student_row['student'])
+                        remaining_students = remaining_students.drop(best_students.index)
                     else:
                         # 유일한 최고 입찰가 학생이 있는 경우, 그 학생을 해당 자리에 배정
-                        chosen_student = best_students.iloc[0]['student']
-                        assigned_seats[best_students.iloc[0]['choice']] = chosen_student
-                        remaining_students.remove(chosen_student)
+                        chosen_student = best_students.iloc[0]
+                        assigned_seats[chosen_student[f'choice{priority[-1]}']] = chosen_student['studentName']
+                        remaining_students = remaining_students.drop(chosen_student.name)
 
                     # 최종적으로 유일한 학생이 배정되면, 다음 순번으로 진행
                     if len(best_students) == 1:
                         break
 
-                return remaining_students
+                # 1지망에서 배정된 학생들 제거하고, 해당 지망 관련 데이터 제거
+                return df.drop(assigned_seats.values()), remaining_students.drop(columns=[f'choice{priority[-1]}', f'bidPrice{priority[-1]}'])
 
             # 1지망 배정 수행
-            remaining_students_after_choice1 = assign_choice(students, 'choice1')
+            remaining_df, df_for_second_choice = assign_choice(df, 'choice1')
 
             # 2지망 배정 수행 (1지망에서 자리가 배정되지 않은 학생들만 대상으로)
-            assign_choice(remaining_students_after_choice1, 'choice2')
+            assign_choice(df_for_second_choice, 'choice2')
 
             # 1지망과 2지망 배정 결과를 모두 포함하여 출력
             st.subheader("🎮 1지망 및 2지망 배정 결과")
             result_rows = []
             for seat, student in sorted(assigned_seats.items()):
-                result_rows.append([f"{seat}번 자리", student.studentName])
+                result_rows.append([f"{seat}번 자리", student])
 
             result_df = pd.DataFrame(result_rows, columns=["자리", "배정된 학생"])
 
