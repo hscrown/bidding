@@ -43,25 +43,24 @@ if uploaded_file is not None:
                         'choice': [getattr(s, priority) for s in remaining_students],
                         'bidPrice': [getattr(s, f'bidPrice{priority[-1]}') for s in remaining_students]
                     })
-                    max_bids = df_choices.groupby('choice')['bidPrice'].max()
 
-                    assigned = False
-                    for choice, max_bid in max_bids.items():
-                        best_students = df_choices[(df_choices['choice'] == choice) & (df_choices['bidPrice'] == max_bid)]
-                        
-                        if len(best_students) == 1:
-                            # 최고 입찰자가 한 명인 경우 해당 학생 배정
-                            chosen_student = best_students.iloc[0]['student']
-                            assigned_seats[choice] = chosen_student
-                            remaining_students.remove(chosen_student)
-                            assigned = True
-                        else:
-                            # 최고 입찰자가 여러 명인 경우 모두 탈락 처리
-                            for _, student_row in best_students.iterrows():
-                                remaining_students.remove(student_row['student'])
+                    max_bid = df_choices['bidPrice'].max()
+                    best_students = df_choices[df_choices['bidPrice'] == max_bid]
 
-                    if assigned:
+                    if len(best_students) > 1:
+                        # 동일한 최고 입찰가를 제시한 학생들이 여러 명인 경우, 이 학생들을 탈락시킴
+                        for _, student_row in best_students.iterrows():
+                            remaining_students.remove(student_row['student'])
+                    else:
+                        # 유일한 최고 입찰가 학생이 있는 경우, 그 학생을 해당 자리에 배정
+                        chosen_student = best_students.iloc[0]['student']
+                        assigned_seats[best_students.iloc[0]['choice']] = chosen_student
+                        remaining_students.remove(chosen_student)
+
+                    # 최종적으로 유일한 학생이 배정되면, 다음 순번으로 진행
+                    if len(best_students) == 1:
                         break
+
                 return remaining_students
 
             # 1지망 배정 수행
