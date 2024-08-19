@@ -31,6 +31,7 @@ if uploaded_file is not None:
                     # 해당 자리가 이미 배정되었는지 확인
                     if choice in taken_seats:
                         st.write(f"학생 {student_name}의 {choice_column} 자리 {choice}는 이미 배정됨.")
+                        unassigned_students.append(student)  # 다음 지망으로 넘어가기 위해 추가
                         continue  # 이미 배정된 자리면 건너뜀
 
                     # 해당 자리를 차지할 다른 학생이 있는지 확인
