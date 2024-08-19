@@ -27,7 +27,7 @@ if uploaded_file is not None:
                         in zip(df['studentId'], df['studentName'], df['points'], df['choice1'], df['bidPrice1'], 
                                df['choice2'], df['bidPrice2'])]
 
-            # 자리 배정을 위한 딕셔너리
+            # 자리 배정을 위한 딕셔너리 (seat_number: studentId)
             assigned_seats = {}
 
             def assign_choice(df, priority):
@@ -47,7 +47,7 @@ if uploaded_file is not None:
                     else:
                         # 유일한 최고 입찰가 학생이 있는 경우, 그 학생을 해당 자리에 배정
                         chosen_student = best_students.iloc[0]
-                        assigned_seats[chosen_student[f'choice{priority[-1]}']] = chosen_student['studentName']
+                        assigned_seats[chosen_student[f'choice{priority[-1]}']] = chosen_student['studentId']
                         remaining_students = remaining_students.drop(chosen_student.name)
 
                     # 최종적으로 유일한 학생이 배정되면, 다음 순번으로 진행
@@ -55,10 +55,11 @@ if uploaded_file is not None:
                         break
 
                 # 1지망에서 배정된 학생들 제거하고, 해당 지망 관련 데이터 제거
-                return df.drop(assigned_seats.values()), remaining_students.drop(columns=[f'choice{priority[-1]}', f'bidPrice{priority[-1]}'])
+                df_remaining = df[~df['studentId'].isin(assigned_seats.values())]
+                return df_remaining.drop(columns=[f'choice{priority[-1]}', f'bidPrice{priority[-1]}'])
 
             # 1지망 배정 수행
-            remaining_df, df_for_second_choice = assign_choice(df, 'choice1')
+            df_for_second_choice = assign_choice(df, 'choice1')
 
             # 2지망 배정 수행 (1지망에서 자리가 배정되지 않은 학생들만 대상으로)
             assign_choice(df_for_second_choice, 'choice2')
@@ -66,8 +67,9 @@ if uploaded_file is not None:
             # 1지망과 2지망 배정 결과를 모두 포함하여 출력
             st.subheader("🎮 1지망 및 2지망 배정 결과")
             result_rows = []
-            for seat, student in sorted(assigned_seats.items()):
-                result_rows.append([f"{seat}번 자리", student])
+            for seat, student_id in sorted(assigned_seats.items()):
+                student_name = df.loc[df['studentId'] == student_id, 'studentName'].values[0]
+                result_rows.append([f"{seat}번 자리", student_name])
 
             result_df = pd.DataFrame(result_rows, columns=["자리", "배정된 학생"])
 
