@@ -152,33 +152,45 @@ if uploaded_file is not None and not df.empty:
         # 고정된 빈자리
         fixed_empty_seats = {5, 30}
 
-        def assign_choice(priority):
-            """ 
-            주어진 priority에 따라 학생들을 배정하는 함수 
-            priority는 'choice1', 'choice2', 'choice3' 중 하나를 의미
-            """
-            remaining_students = [s for s in students if s not in assigned_seats.values()]
-            choices = [getattr(student, priority) for student in remaining_students]
-            bids = [getattr(student, f'bidPrice{priority[-1]}') for student in remaining_students]
+      def assign_choice(priority):
+        """ 
+        주어진 priority에 따라 학생들을 배정하는 함수 
+        priority는 'choice1', 'choice2', 'choice3' 중 하나를 의미
+        """
+        remaining_students = [s for s in students if s not in assigned_seats.values()]
+        choices = [getattr(student, priority) for student in remaining_students]
+        bids = [getattr(student, f'bidPrice{priority[-1]}') for student in remaining_students]
+    
+        # choice 기준으로 bid의 최대값을 구하고, 동일한 최고 입찰자가 있을 경우 탈락 처리
+        df_choices = pd.DataFrame({
+            'student': remaining_students,
+            'choice': choices,
+            'bid': bids
+        })
+        
+        # 각 choice에 대해 최대 입찰가 계산
+        max_bids = df_choices.groupby('choice')['bid'].max()
+    
+        for choice, max_bid in max_bids.items():
+            best_students = df_choices[(df_choices['choice'] == choice) & (df_choices['bid'] == max_bid)]
+            
+            if len(best_students) == 1:
+                # 최고 입찰자가 한 명인 경우 해당 학생 배정
+                chosen_student = best_students.iloc[0]['student']
+                assigned_seats[choice] = chosen_student
+            else:
+                # 최고 입찰자가 여러 명인 경우 모두 탈락 처리
+                for _, student_row in best_students.iterrows():
+                    remaining_students.remove(student_row['student'])
+                    
+        # remaining_students 리스트에 포함된 학생들만 다음 priority로 넘어감
+        return remaining_students
+    
+    # 1지망, 2지망, 3지망에 대해 순차적으로 배정
+    students = assign_choice('choice1')
+    students = assign_choice('choice2')
+    assign_choice('choice3')
 
-            # choice1 기준으로 bidPrice1의 최대값을 구하고, 해당 학생을 배정
-            df_choices = pd.DataFrame({
-                'student': remaining_students,
-                'choice': choices,
-                'bid': bids
-            })
-            max_bids = df_choices.groupby('choice')['bid'].max()
-
-            for choice, max_bid in max_bids.items():
-                best_students = df_choices[(df_choices['choice'] == choice) & (df_choices['bid'] == max_bid)]
-                if not best_students.empty:
-                    chosen_student = best_students.sample(1).iloc[0]['student']  # 동일한 경우 무작위로 선택
-                    assigned_seats[choice] = chosen_student
-
-        # 1지망, 2지망, 3지망에 대해 순차적으로 배정
-        assign_choice('choice1')
-        assign_choice('choice2')
-        assign_choice('choice3')
 
         # 남은 자리 찾기 (고정된 빈자리를 제외한 자리들 중에서 1번부터 시작해서 빈 번호가 없게)
         total_seats = list(range(1, len(students) + 1))  # 전체 자리 번호 (1부터 시작)
